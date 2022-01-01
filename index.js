@@ -5,9 +5,11 @@ const PORT = process.env.PORT || 5000;
 const { MongoClient } = require("mongodb");
 require("dotenv").config();
 const admin = require("firebase-admin");
+const fileUpload = require("express-fileupload");
 
 app.use(cors());
 app.use(express.json());
+app.use(fileUpload());
 
 app.get("/", (req, res) => {
   res.send("server side of doctors portal");
@@ -43,6 +45,30 @@ async function run() {
 
     const orderCollection = client.db("doctors-portal").collection("orders");
     const usersCollection = client.db("doctors-portal").collection("users");
+    const doctorsCollection = client.db("doctors-portal").collection("doctors");
+
+    app.post("/doctors", async (req, res) => {
+      const name = req.body.name;
+      const email = req.body.email;
+      const picture = req.files.image;
+      const pictureData = picture.data;
+      const encodedPicture = pictureData.toString("base64");
+      const imageBuffer = Buffer.from(encodedPicture, "base64");
+      const doctor = {
+        name,
+        email,
+        image: imageBuffer,
+      };
+
+      const result = await doctorsCollection.insertOne(doctor);
+
+      res.json(result);
+    });
+
+    app.get("/doctors", async (req, res) => {
+      const result = await doctorsCollection.find({}).toArray();
+      res.json(result);
+    });
 
     app.get("/order", async (req, res) => {
       const email = req.query.email;
